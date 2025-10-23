@@ -1,0 +1,36 @@
+---
+- hosts: linux
+  gather_facts: true
+  become: yes
+  vars:
+    connector_ip: "{{ connector_ip }}"
+  tasks:
+    - name: Determine the correct .bashrc path based on the distribution
+      set_fact:
+        bashrc_path: "{{ '/etc/bashrc' if ansible_os_family == 'RedHat' else '/etc/bash.bashrc' }}"
+
+    - name: Edit .bashrc for Red Hat and Debian-based systems
+      lineinfile:
+        path: "{{ bashrc_path }}"
+        line: PROMPT_COMMAND='history -a >(tee -a ~/.bash_history | logger -t "LnxCmd:$USER[$$]$SSH_CONNECTION command")'
+        insertafter: EOF
+      when: bashrc_path is defined
+
+#    - name: Display the path being edited for debugging purposes
+#      debug:
+#        msg: "Editing file: {{ bashrc_path }}"
+
+    - name: Add first config
+      lineinfile:
+        path: /etc/rsyslog.conf
+        line: "kern.*;user.*;daemon.*;auth.*;authpriv.*;syslog.*;cron.*;security.* @{{ connector_ip }}:514"
+        regexp: '^kern\.\*;user\.\*;daemon\.\*;auth\.\*;authpriv\.\*;syslog\.\*;cron\.\*;security\.\* @.+:514$'
+        insertafter: EOF
+    - name: Display the path being edited for debugging purposes
+      debug:
+        msg: "Editing file: {{ connector_ip }}"
+
+    - name: Restart Service
+      ansible.builtin.service:
+        name : rsyslog
+        state: restarted
