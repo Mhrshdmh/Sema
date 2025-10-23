@@ -2,6 +2,7 @@
 - hosts: linux
   gather_facts: true
   become: yes
+  become_user: root
   vars:
     connector_ip: "{{ connector_ip }}"
   tasks:
